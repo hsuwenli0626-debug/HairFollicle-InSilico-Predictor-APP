@@ -8,12 +8,12 @@ st.set_page_config(page_title="毛囊細胞狀態轉移預測系統", layout="wi
 st.title("🧬 毛囊細胞狀態轉移預測系統 (In Silico Predictor)")
 st.markdown("基於 scRNA-seq 資料，模擬特定基因擾動後，毛囊細胞向 Anagen、Catagen 或 Telogen 轉移的機率。")
 
-DATA_PATH = "adata_lite.h5ad"
+DATA_PATH = "adata_full_genes_slim.h5ad"
 
 # ==========================================
-# Google Drive 檔案 ID (輕量版)
+# Google Drive 檔案 ID (全基因瘦身版)
 # ==========================================
-FILE_ID = "1MVLyMys2Yb-q7pNQPQady0KmWeC8zxoD"
+FILE_ID = "1g_z533p5rgIWxlmQ3faPRWeBBfs4Ps3V"
 
 @st.cache_resource
 def load_predictor():
