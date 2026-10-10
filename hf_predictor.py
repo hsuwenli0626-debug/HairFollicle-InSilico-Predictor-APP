@@ -37,7 +37,7 @@ class HairFolliclePredictor:
         
         X_train, X_test, y_train, y_test = train_test_split(X_scaled, self.y, test_size=0.2, random_state=42)
         
-        self.classifier = LogisticRegression(solver='lbfgs', max_iter=2000, random_state=42)
+        self.classifier = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=2000, random_state=42)
         self.classifier.fit(X_train, y_train)
         
         y_pred = self.classifier.predict(X_test)
@@ -47,6 +47,7 @@ class HairFolliclePredictor:
     def simulate(self, target_celltype, current_stage, target_gene, perturbation_type, perturbation_value, 
                  loading_multiplier=3.0, temperature=1.5):
                  
+        # 支援單一基因或 Pathway 基因列表
         if isinstance(target_gene, str):
             target_genes = [target_gene.upper()]
         elif isinstance(target_gene, list):
@@ -57,10 +58,11 @@ class HairFolliclePredictor:
         valid_genes = [g for g in target_genes if g in self.adata.var_names]
         if not valid_genes:
             print(f"❌ 錯誤：在資料庫中找不到指定的基因。")
-            return None
+            return
             
         genes_str = ", ".join(valid_genes)
         
+        # 支援簡化版主分類與精確次分類雙軌制
         if target_celltype in self.simplified_map:
             target_subtypes = self.simplified_map[target_celltype]
             mask = (self.adata.obs['cell_type'].isin(target_subtypes)) & (self.adata.obs['stage'] == current_stage)
@@ -73,7 +75,7 @@ class HairFolliclePredictor:
         
         if len(target_indices) == 0:
             print(f"❌ 錯誤：找不到符合條件的細胞 ({current_stage} 的 {display_celltype})。")
-            return None
+            return
             
         print(f"🚀 啟動模擬：針對 {len(target_indices)} 顆細胞")
         print(f"🧬 基因: [{genes_str}] | 擾動: {perturbation_type} ({perturbation_value}x) | 權重槓桿: {loading_multiplier}x")
@@ -87,8 +89,10 @@ class HairFolliclePredictor:
         for g in valid_genes:
             gene_idx = self.adata.var_names.get_loc(g)
             
+            # 強制槓桿放大 PCA 權重
             modified_loadings[gene_idx, :] = modified_loadings[gene_idx, :] * loading_multiplier
             
+            # Z-score 尺度還原
             g_mean = self.adata.var['mean'].values[gene_idx]
             g_std = self.adata.var['std'].values[gene_idx]
             
@@ -104,10 +108,12 @@ class HairFolliclePredictor:
                 
             new_log1p_vals = np.log1p(new_exp)
             new_scaled_vals = (new_log1p_vals - g_mean) / g_std
+            # 解除天花板封印，容納極限擾動
             new_scaled_vals = np.clip(new_scaled_vals, a_min=None, a_max=100.0)
             
             target_X[:, gene_idx] = new_scaled_vals
             
+        # 重新投影並計算決策邊界
         perturbed_pca = np.dot(target_X, modified_loadings)
         perturbed_pca_scaled = self.scaler.transform(perturbed_pca)
         
@@ -132,6 +138,7 @@ class HairFolliclePredictor:
         avg_probs = np.mean(probs, axis=0)
         avg_orig_probs = np.mean(orig_probs, axis=0)
         
+        # 長條圖視覺化
         classes = self.classifier.classes_
         fig, ax = plt.subplots(figsize=(8, 5))
         x = np.arange(len(classes))
@@ -162,5 +169,4 @@ class HairFolliclePredictor:
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         plt.tight_layout()
-        
-        return fig
+        plt.show()
