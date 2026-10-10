@@ -1,9 +1,7 @@
 import numpy as np
-import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import warnings
@@ -11,119 +9,70 @@ import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
 
 class HairFolliclePredictor:
-    def __init__(self, adata):
-        print("正在初始化系統與訓練狀態分類器...")
-        self.adata = adata.copy()
+    def __init__(self, adata_path):
+        print(f"正在載入模型資料庫: {adata_path} ...")
+        self.adata = sc.read_h5ad(adata_path)
         
         if 'X_pca' not in self.adata.obsm:
-            raise ValueError("找不到 PCA 降維資料。請先確保資料包含 .obsm['X_pca']")
+            raise ValueError("找不到 PCA 降維資料。")
         if 'stage' not in self.adata.obs.columns:
             raise ValueError("找不到 'stage' 欄位。")
-            
-        # 定義給 GitHub 使用者的前台簡化標籤映射
-        self.simplified_map = {
-            'DP': ['DP_Mesenchymal'],
-            'Bulge_Stem_Cells': ['Bulge_KRT15_High', 'Bulge_Progenitor'],
-            'Matrix_HG': ['Matrix_Candidate', 'HG_Hair_Germ'],
-            'ORS': [c for c in self.adata.obs['cell_type'].unique() if 'ORS' in str(c)]
-        }
             
         self.X = self.adata.obsm['X_pca']
         self.y = self.adata.obs['stage'].values
         self.stages = np.unique(self.y)
         
+        print("正在初始化系統與訓練狀態分類器...")
         self.scaler = StandardScaler()
         X_scaled = self.scaler.fit_transform(self.X)
         
-        X_train, X_test, y_train, y_test = train_test_split(X_scaled, self.y, test_size=0.2, random_state=42)
+        self.classifier = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=2000, random_state=42)
+        self.classifier.fit(X_scaled, self.y)
         
-        self.classifier = LogisticRegression(solver='lbfgs', max_iter=2000, random_state=42)
-        self.classifier.fit(X_train, y_train)
-        
-        y_pred = self.classifier.predict(X_test)
-        acc = accuracy_score(y_test, y_pred)
-        print(f"✅ 狀態分類器訓練完成！Anagen, Catagen, Telogen 分類準確度: {acc*100:.2f}%\n" + "-"*50)
+        y_pred = self.classifier.predict(X_scaled)
+        acc = accuracy_score(self.y, y_pred)
+        print(f"狀態分類器訓練完成！整體分類準確度: {acc*100:.2f}%")
 
     def simulate(self, target_celltype, current_stage, target_gene, perturbation_type, perturbation_value, 
-                 loading_multiplier=3.0, temperature=1.5):
-                 
-        # 支援單一基因或 Pathway 基因列表
-        if isinstance(target_gene, str):
-            target_genes = [target_gene.upper()]
-        elif isinstance(target_gene, list):
-            target_genes = [g.upper() for g in target_gene]
-        else:
-            raise ValueError("target_gene 必須是字串或字串列表。")
+                 loading_multiplier=10.0, temperature=10.0):
+        target_gene = target_gene.upper()
+        if target_gene not in self.adata.var_names:
+            return {"error": f"在資料庫中找不到基因 '{target_gene}'。"}
             
-        valid_genes = [g for g in target_genes if g in self.adata.var_names]
-        if not valid_genes:
-            st.error(f"❌ 錯誤：在資料庫中找不到指定的基因。您輸入的是: {target_genes}")
-            st.info(f"提示：資料庫內部分基因範例: {list(self.adata.var_names[:5])}")
-            return None
-
         mask = (self.adata.obs['cell_type'] == target_celltype) & (self.adata.obs['stage'] == current_stage)
         target_indices = np.where(mask)[0]
         
         if len(target_indices) == 0:
-            st.error(f"❌ 錯誤：找不到符合條件的細胞 (時期: {current_stage}, 細胞類型: {target_celltype})。")
-            st.info(f"提示：此資料庫中實際包含的時期有: {list(self.adata.obs['stage'].unique())}")
-            st.info(f"提示：此時期的細胞型態分佈: {self.adata.obs[self.adata.obs['stage'] == current_stage]['cell_type'].value_counts().to_dict()}")
-            return None
+            return {"error": f"找不到符合條件的細胞 ({current_stage} 的 {target_celltype})。"}
             
-        genes_str = ", ".join(valid_genes)
-        
-        # 支援簡化版主分類與精確次分類雙軌制
-        if target_celltype in self.simplified_map:
-            target_subtypes = self.simplified_map[target_celltype]
-            mask = (self.adata.obs['cell_type'].isin(target_subtypes)) & (self.adata.obs['stage'] == current_stage)
-            display_celltype = f"{target_celltype} (Merged Group)"
-        else:
-            mask = (self.adata.obs['cell_type'] == target_celltype) & (self.adata.obs['stage'] == current_stage)
-            display_celltype = target_celltype
-            
-        target_indices = np.where(mask)[0]
-        
-        if len(target_indices) == 0:
-            print(f"❌ 錯誤：找不到符合條件的細胞 ({current_stage} 的 {display_celltype})。")
-            return
-            
-        print(f"🚀 啟動模擬：針對 {len(target_indices)} 顆細胞")
-        print(f"🧬 基因: [{genes_str}] | 擾動: {perturbation_type} ({perturbation_value}x) | 權重槓桿: {loading_multiplier}x")
-        
         target_X = self.adata.X[target_indices, :].copy()
         if type(target_X) != np.ndarray:
             target_X = target_X.toarray()
             
         modified_loadings = self.adata.varm['PCs'].copy()
+        gene_idx = self.adata.var_names.get_loc(target_gene)
+        
+        modified_loadings[gene_idx, :] = modified_loadings[gene_idx, :] * loading_multiplier
+        
+        g_mean = self.adata.var['mean'].values[gene_idx]
+        g_std = self.adata.var['std'].values[gene_idx]
+        
+        log1p_vals = (target_X[:, gene_idx] * g_std) + g_mean
+        log1p_vals = np.maximum(0, log1p_vals) 
+        original_exp = np.expm1(log1p_vals) 
+        
+        if perturbation_type == 'suppress':
+            alpha = max(0.0, 1.0 - (perturbation_value / 10.0))
+            new_exp = original_exp * alpha
+        else: 
+            new_exp = original_exp * perturbation_value
             
-        for g in valid_genes:
-            gene_idx = self.adata.var_names.get_loc(g)
-            
-            # 強制槓桿放大 PCA 權重
-            modified_loadings[gene_idx, :] = modified_loadings[gene_idx, :] * loading_multiplier
-            
-            # Z-score 尺度還原
-            g_mean = self.adata.var['mean'].values[gene_idx]
-            g_std = self.adata.var['std'].values[gene_idx]
-            
-            log1p_vals = (target_X[:, gene_idx] * g_std) + g_mean
-            log1p_vals = np.maximum(0, log1p_vals) 
-            original_exp = np.expm1(log1p_vals) 
-            
-            if perturbation_type == 'suppress':
-                alpha = max(0.0, 1.0 - (perturbation_value / 10.0))
-                new_exp = original_exp * alpha
-            elif perturbation_type == 'overexpress':
-                new_exp = original_exp * perturbation_value
-                
-            new_log1p_vals = np.log1p(new_exp)
-            new_scaled_vals = (new_log1p_vals - g_mean) / g_std
-            # 解除天花板封印，容納極限擾動
-            new_scaled_vals = np.clip(new_scaled_vals, a_min=None, a_max=100.0)
-            
-            target_X[:, gene_idx] = new_scaled_vals
-            
-        # 重新投影並計算決策邊界
+        new_log1p_vals = np.log1p(new_exp)
+        new_scaled_vals = (new_log1p_vals - g_mean) / g_std
+        new_scaled_vals = np.clip(new_scaled_vals, a_min=None, a_max=100.0)
+        
+        target_X[:, gene_idx] = new_scaled_vals
+        
         perturbed_pca = np.dot(target_X, modified_loadings)
         perturbed_pca_scaled = self.scaler.transform(perturbed_pca)
         
@@ -147,9 +96,8 @@ class HairFolliclePredictor:
         
         avg_probs = np.mean(probs, axis=0)
         avg_orig_probs = np.mean(orig_probs, axis=0)
-        
-        # 長條圖視覺化
         classes = self.classifier.classes_
+        
         fig, ax = plt.subplots(figsize=(8, 5))
         x = np.arange(len(classes))
         width = 0.35
@@ -157,9 +105,8 @@ class HairFolliclePredictor:
         rects1 = ax.bar(x - width/2, avg_orig_probs * 100, width, label='Before Perturbation', color='#D0D0D0')
         rects2 = ax.bar(x + width/2, avg_probs * 100, width, label='After Perturbation', color='#E64B35')
         
-        display_genes = genes_str if len(genes_str) < 30 else f"{len(valid_genes)} Target Genes"
         ax.set_ylabel('Probability (%)', fontsize=12)
-        ax.set_title(f'Pathway Transition Probability\nCell: {display_celltype} | Stage: {current_stage}\nPathway: [{display_genes}] ({perturbation_type}: {perturbation_value})', fontsize=11)
+        ax.set_title(f'State Transition Probability\nCell: {target_celltype} | Stage: {current_stage} | Gene: {target_gene} ({perturbation_type})', fontsize=11)
         ax.set_xticks(x)
         ax.set_xticklabels(classes, fontsize=12)
         ax.legend(fontsize=11)
@@ -179,4 +126,11 @@ class HairFolliclePredictor:
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         plt.tight_layout()
-        plt.show()
+        
+        result_probs = {cls: prob for cls, prob in zip(classes, avg_probs)}
+        
+        return {
+            "error": None,
+            "figure": fig,
+            "probabilities": result_probs
+        }
