@@ -26,7 +26,7 @@ class HairFolliclePredictor:
         self.scaler = StandardScaler()
         X_scaled = self.scaler.fit_transform(self.X)
         
-        self.classifier = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=2000, random_state=42)
+        self.classifier = LogisticRegression(solver='lbfgs', max_iter=2000, random_state=42)
         self.classifier.fit(X_scaled, self.y)
         
         y_pred = self.classifier.predict(X_scaled)
