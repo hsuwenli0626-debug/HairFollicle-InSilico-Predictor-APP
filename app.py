@@ -54,7 +54,17 @@ st.sidebar.header("⚙️ 模擬參數設定")
 
 target_celltype = st.sidebar.selectbox(
     "1. 目標細胞群 (Target Celltype)", 
-    options=['DP', 'Bulge_Stem_Cells', 'Matrix_HG', 'ORS', 'DP_Mesenchymal']
+    options=[
+        'ORS_Epithelial',
+        'SOX9_High_Progenitor',
+        'Bulge_Progenitor',
+        'Bulge_KRT15_High',
+        'HG_Hair_Germ',
+        'DP_Mesenchymal',
+        'IRS',
+        'Matrix_Candidate',
+        'Fibroblast_VIM_High'
+    ]
 )
 
 current_stage = st.sidebar.selectbox(
