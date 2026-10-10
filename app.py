@@ -11,9 +11,9 @@ st.markdown("基於 scRNA-seq 資料，模擬特定基因擾動後，毛囊細�
 DATA_PATH = "adata_full_genes.h5ad"
 
 # ==========================================
-# 你的 Google Drive 檔案 ID (已自動帶入)
+# Google Drive 檔案 ID
 # ==========================================
-FILE_ID = "12Ry2S9HozStCvRqdd7ZlBYv3NQ9YLiWt" 
+FILE_ID = "12Ry2S9HozStCvRqdd7ZlBYv3NQ9YLiWt"
 
 @st.cache_resource
 def load_predictor():
@@ -32,7 +32,7 @@ def load_predictor():
 
 hf_system = load_predictor()
 
-# 依照你指定的細胞清單更新
+# 指定細胞種類清單
 cell_types = [
     "ORS_Epithelial", "SOX9_High_Progenitor", "Bulge_Progenitor",
     "Bulge_KRT15_High", "HG_Hair_Germ", "DP_Mesenchymal",
@@ -67,4 +67,5 @@ if st.sidebar.button("開始模擬預測", type="primary"):
             col1.metric("Anagen 機率", f"{probs.get('Anagen', 0):.2%}")
             col2.metric("Catagen 機率", f"{probs.get('Catagen', 0):.2%}")
             col3.metric("Telogen 機率", f"{probs.get('Telogen', 0):.2%}")
-            st.pyplot(results["figure"])
+            
+            st.pyplot(results["figure"], use_container_width=True)
