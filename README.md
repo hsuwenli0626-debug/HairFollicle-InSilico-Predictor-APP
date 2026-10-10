@@ -12,8 +12,19 @@
 系統啟動時會自動抓取模型資料庫。若在特殊環境下自動下載失敗，您也可以手動點擊 [此 Google Drive 連結](https://drive.google.com/file/d/12Ry2S9HozStCvRqdd7ZlBYv3NQ9YLiWt/view?usp=sharing) 下載 `adata_full_genes.h5ad`，並將其放置於本專案的根目錄下（與 `app.py` 放在同一層）。
 
 ## 安裝與執行環境
-
-1. 複製此專案到本地端：
+   1. 複製此專案到本地端：
    ```bash
-   git clone [https://github.com/hsuwenli0626-debug/HairFollicle-InSilico-Predictor-APP.git](https://github.com/hsuwenli0626-debug/HairFollicle-InSilico-Predictor-APP.git)
+   git clone https://github.com/hsuwenli0626-debug/HairFollicle-InSilico-Predictor-APP.git
    cd HairFollicle-InSilico-Predictor-APP
+   ```
+   2.安裝必要的 Python 套件：
+   ```bash
+   pip install -r requirements.txt
+   ```
+   
+   3.啟動 Streamlit 應用程式：
+   ```bash
+   streamlit run app.py
+   ```
+
+   
