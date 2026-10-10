@@ -69,7 +69,7 @@ def load_system():
             if not adatas:
                 raise FileNotFoundError("無法從雲端檔案中對應出 Anagen、Catagen、Telogen 的 10x 檔案結構。")
                 
-            adata = adatas[0].concatenate(adatas[1:], batch_key='sample_batch')
+            adata = ad.concat(adatas, join='inner', batch_key='sample_batch')
             adata.var_names_make_unique()
             
             sc.pp.filter_cells(adata, min_genes=200)
