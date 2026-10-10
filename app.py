@@ -21,8 +21,8 @@ def load_predictor():
     if not os.path.exists(DATA_PATH):
         st.info("首次啟動：正在從雲端下載模型資料庫，請耐心等候...")
         try:
-            # 使用 id 與 fuzzy=True 自動處理下載與確認頁面
-            gdown.download(id=FILE_ID, output=DATA_PATH, quiet=False, fuzzy=True)
+            # 移除 fuzzy=True，使用標準下載語法
+            gdown.download(id=FILE_ID, output=DATA_PATH, quiet=False)
             st.success("資料庫下載完成！")
         except Exception as e:
             st.error(f"下載失敗，請確認 Google Drive 連結是否已設定為「知道連結的人均可讀取」。錯誤訊息: {e}")
