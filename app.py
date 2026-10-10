@@ -11,7 +11,7 @@ st.markdown("本系統基於 scRNA-seq 資料，可模擬特定基因擾動後�
 
 # Google Drive 設定：
 # 預設使用先前建立的 Google Drive 資料夾/檔案 ID
-GDRIVE_FOLDER_ID = "1EOZUHP638H6nZSUHjFDhMcK6qPTVClej"
+GDRIVE_FOLDER_ID = "1B0QFE8Z231glvLGqZ5ld3x9NnB9IABPP"
 
 @st.cache_resource
 def load_system():
