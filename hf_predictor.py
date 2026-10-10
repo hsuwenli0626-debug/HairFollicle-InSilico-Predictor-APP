@@ -57,8 +57,18 @@ class HairFolliclePredictor:
             
         valid_genes = [g for g in target_genes if g in self.adata.var_names]
         if not valid_genes:
-            print(f"❌ 錯誤：在資料庫中找不到指定的基因。")
-            return
+            st.error(f"❌ 錯誤：在資料庫中找不到指定的基因。您輸入的是: {target_genes}")
+            st.info(f"提示：資料庫內部分基因範例: {list(self.adata.var_names[:5])}")
+            return None
+
+        mask = (self.adata.obs['cell_type'] == target_celltype) & (self.adata.obs['stage'] == current_stage)
+        target_indices = np.where(mask)[0]
+        
+        if len(target_indices) == 0:
+            st.error(f"❌ 錯誤：找不到符合條件的細胞 (時期: {current_stage}, 細胞類型: {target_celltype})。")
+            st.info(f"提示：此資料庫中實際包含的時期有: {list(self.adata.obs['stage'].unique())}")
+            st.info(f"提示：此時期的細胞型態分佈: {self.adata.obs[self.adata.obs['stage'] == current_stage]['cell_type'].value_counts().to_dict()}")
+            return None
             
         genes_str = ", ".join(valid_genes)
         
