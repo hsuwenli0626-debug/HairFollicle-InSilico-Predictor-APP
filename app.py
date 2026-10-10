@@ -8,21 +8,21 @@ st.set_page_config(page_title="毛囊細胞狀態轉移預測系統", layout="wi
 st.title("🧬 毛囊細胞狀態轉移預測系統 (In Silico Predictor)")
 st.markdown("基於 scRNA-seq 資料，模擬特定基因擾動後，毛囊細胞向 Anagen、Catagen 或 Telogen 轉移的機率。")
 
-DATA_PATH = "adata_full_genes.h5ad"
+DATA_PATH = "adata_lite.h5ad"
 
 # ==========================================
-# Google Drive 檔案 ID
+# Google Drive 檔案 ID (輕量版)
 # ==========================================
-FILE_ID = "12Ry2S9HozStCvRqdd7ZlBYv3NQ9YLiWt"
+FILE_ID = "1MVLyMys2Yb-q7pNQPQady0KmWeC8zxoD"
 
 @st.cache_resource
 def load_predictor():
     # 如果檔案不存在，則從 Google Drive 自動下載
     if not os.path.exists(DATA_PATH):
-        st.info("首次啟動：正在從雲端下載模型資料庫，檔案較大，請耐心等候幾分鐘...")
+        st.info("首次啟動：正在從雲端下載模型資料庫，請耐心等候...")
         try:
-            url = f'https://drive.google.com/uc?id={FILE_ID}'
-            gdown.download(url, DATA_PATH, quiet=False)
+            # 使用 id 與 fuzzy=True 自動處理下載與確認頁面
+            gdown.download(id=FILE_ID, output=DATA_PATH, quiet=False, fuzzy=True)
             st.success("資料庫下載完成！")
         except Exception as e:
             st.error(f"下載失敗，請確認 Google Drive 連結是否已設定為「知道連結的人均可讀取」。錯誤訊息: {e}")
